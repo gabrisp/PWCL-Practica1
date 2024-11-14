@@ -5,7 +5,7 @@ const REACT_APP_HASH = 'd27552df26eea0cda842fb73832b3617';
 
 // Funcion para obtener los comics
 const getComics = (offset = 0) => {
-  const url = `https://gateway.marvel.com:443/v1/public/comics?limit=30&offset=${offset}&apikey=${REACT_APP_KEY}&ts=1&hash=${REACT_APP_HASH}`;
+  const url = `https://gateway.marvel.com:443/v1/public/comics?orderBy=modified&noVariants=true&limit=40&offset=${offset}&apikey=${REACT_APP_KEY}&ts=1&hash=${REACT_APP_HASH}`;
   return fetch(url).then(response => response.json());
 };
 
