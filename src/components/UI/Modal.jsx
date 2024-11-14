@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+
+// Componente reutilizable para abrir y cerrar modales customizados
 const Modal = ({ isOpen, onClose, children, id, setIsVisible, isVisible }) => {
 
     useEffect(() => {

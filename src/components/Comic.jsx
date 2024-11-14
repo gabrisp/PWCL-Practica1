@@ -1,6 +1,7 @@
 import React from 'react'
 import MainButton from './UI/MainButton';
 
+// Componente de cada comic en el grid
 const Comic = ({comic, setSelectedComic, isFavorited, toggleFavoriteComic}) => (
      
     <div className='comic_wrapper' onClick={()=>setSelectedComic(comic.id)}>

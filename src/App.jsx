@@ -1,187 +1,166 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-import {APIConnect} from './functions';
+// Styles
+import './App.css';
+
+// React
+import { useEffect, useState } from 'react';
+
+// Functions
+import { APIConnect } from './functions';
+
+// Components
 import Comics from './components/Comics';
-import SelectMode from './components/UI/SelectMode';
 import SelectedComic from './components/SelectedComic';
 import FavoritesModal from './components/FavoritesModal';
-import MainButton from './components/UI/MainButton';
+import Header from './components/UI/Header';
+
 
 function App() {
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Estado para controlar el loading
+  const [comics, setComics] = useState([]); // Estado para almacenar los comics
+  const [mode, setMode] = useState(1); // Estado para controlar el modo de el grid de la pagina
+  const [favoriteComics, setFavoriteComics] = useState(APIConnect.getLocalFavourites()); // Estado para almacenar los favoritos
+  const [searchTerm, setSearchTerm] = useState(''); // Estado para almacenar el termino de busqueda
 
-  const [comics, setComics] = useState([]); // Inicializamos a null = loading si  carga y no hay es nada comics
-  const [comicsOffset, setComicsOffset] = useState(0);
-
-  const [mode, setMode] = useState(1);
-  const [favoriteComics, setFavoriteComics] = useState([]); // Inicializamos a null = loading si  carga y no hay es nada comics
-
-  
+  // Estado para controlar el comic seleccionado y, por ende, el modal de comics
   const [selectedComic, setSelectedComic] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const comic = params.get('comic');
+    const path = window.location.pathname.split('/');
+    const comic = path[1] === 'comic' ? path[2] : null;
     return comic ? parseInt(comic) : null;
   });
 
-  const [favoritesModalOpen, setFavoritesModalOpen] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('open') === 'favorites';
-  });
+  // Estado para controlar el modal de favoritos
+  const [favoritesModalOpen, setFavoritesModalOpen] = useState(window.location.pathname === '/favorites');
 
-  const [colorMode, setColorMode] = useState(()=>{
-    return APIConnect.getColorMode();
-  });
+  // Estado para controlar el color del tema (dark o light)
+  const [colorMode, setColorMode] = useState(() => {
+    const mode = APIConnect.getColorMode();
+    document.body.className = mode === 'dark' ? 'dark' : 'light';
+    return mode;
+  }); 
 
-  
-  const [searchTerm, setSearchTerm] = useState('');
-  
+  // Logica para controlar el color del tema (dark o light)
+  const handleColorMode = (mode) => {
+    if (mode) {
+      APIConnect.setColorMode(mode);
+      setColorMode(mode);
+    }else{
+     mode = APIConnect.getColorMode();
+     setColorMode(mode);
+    }
+    document.body.className = mode === 'dark' ? 'dark' : 'light';
+  };
+
+  // Logica para añadir y eliminar comics de favoritos
   const toggleFavoriteComic = (comic) => {
-    const storedFavorites = APIConnect.getLocalFavourites();
-    const isInFavorites = storedFavorites.some(fav => fav.id === comic.id);
     
-    if(isInFavorites){
-      // Remove from favorites
-      const updatedFavorites = storedFavorites.filter(fav => fav.id !== comic.id);
+    const storedFavorites = APIConnect.getLocalFavourites();
+    const isInFavorites = storedFavorites.some((fav) => fav.id === comic.id);
+
+    if (isInFavorites) { // Si esta en favoritos
+      // Eliminamos el comic de favoritos
+      const updatedFavorites = storedFavorites.filter((fav) => fav.id !== comic.id);
       setFavoriteComics(updatedFavorites);
       APIConnect.setLocalFavourites(updatedFavorites);
-    } else {
-      // Add to favorites
+    } else { // Si no esta en favoritos
+      // Añadimos el comic a favoritos, 
+      // Añadimos el comic completo ya que al buscar por el id dentro de nuestros comics los que no esten (fueron buscados previamente) no apareceran renderizados, de esta forma si apareceran
       const updatedFavorites = [...storedFavorites, comic];
       setFavoriteComics(updatedFavorites);
       APIConnect.setLocalFavourites(updatedFavorites);
     }
   };
 
+  // Logica para cargar los comics
+  useEffect(()=>{
 
-
-
-
-  useEffect(() => {
-    // Apply the color mode class to the body
-    APIConnect.setColorMode(colorMode);
-    document.body.className = colorMode === 'dark' ? 'dark' : 'light';
-  }, [colorMode]);
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setLoading(true);
-      
-      if (searchTerm.length < 2) {
+    setLoading(true);
+    
+    if (searchTerm.length < 2) { // Si hay solo dos caracteres, no realizamos la busqueda
+      // Carga de comics
         APIConnect.listComics()
-          .then(data => {
-            const comics = data.data.results.filter(el => el.thumbnail.path !== 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available');
-            setComics(comics);
-          })
-          .finally(() => setLoading(false));
-        return;
-      }
-      
-      APIConnect.searchComics(searchTerm)
-        .then(data => {
-          const comics = data.data.results.filter(el => el.thumbnail.path !== 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available');
-          setComics(comics);
-        })
-        .finally(() => setLoading(false));
-    }, 750);
+          .then((data) => {
+            const newComics = data.data.results.filter((el) => el.thumbnail.path !== 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available'); // Eliminamos los comics que no tengan imagen
+            setComics(newComics); // Actualizamos el estado de los comics
+            setLoading(false); // Finalizamos el loading
+            console.log(newComics);
+          });
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+    }else {
+      // Busqueda, reemplazamos los comics por los resultados de la busqueda
+        APIConnect.searchComics(searchTerm)
+          .then((data) => {
+            const newComics = data.data.results.filter((el) => el.thumbnail.path !== 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available'); // Eliminamos los comics que no tengan imagen
+            setComics(newComics); // Actualizamos el estado de los comics por los resultados de la busqueda
+            setLoading(false); // Finalizamos el loading
+            console.log(newComics);
+          });
+   }
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    
-    // Update URL based on both states
-    if (selectedComic) {
-      params.set('comic', selectedComic);
-    } else {
-      params.delete('comic');
-    }
-    
-    if (favoritesModalOpen) {
-      params.set('open', 'favorites');
-    } else {
-      params.delete('open');
-    }
-    
-    // Update URL
-    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-    window.history.pushState({}, '', newUrl);
-  }, [selectedComic, favoritesModalOpen]);
+  },[searchTerm]); // Repetimos el efecto cada vez que cambie el termino de busqueda
 
+  // Logica para actualizar la url y el titulo de la pagina
   useEffect(() => {
 
-    APIConnect.listComics(comicsOffset).then(data => setComics(prev => {
-      console.log(data.data.results);
-      const comics = data.data.results.filter(el => el.thumbnail.path !== 'http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available');
-      setFavoriteComics(APIConnect.getLocalFavourites());
-      return [...prev, ...comics];
-    }));
+    if (selectedComic) { // Si hay un comic seleccionado
+      window.history.replaceState({}, '', `/comic/${selectedComic}`); // Actualizamos la url
+      const comic = comics.find((c) => c.id === selectedComic); // Buscamos el comic seleccionado
+      document.title = comic ? `${comic.title}` : '| Marvel Comics'; // Actualizamos el titulo de la pagina
+    } else if (favoritesModalOpen) {
+      window.history.replaceState({}, '', '/favorites'); // Actualizamos la url
+      document.title = 'Marvel Comics | Favorites'; // Actualizamos el titulo de la pagina
+    } else {
+      window.history.replaceState({}, '', '/'); // Actualizamos la url
+      document.title = 'Marvel Comics'; // Actualizamos el titulo de la pagina
+    }
+
+  }, [selectedComic, favoritesModalOpen, comics]); // Repetimos el efecto cada vez que cambie el comic seleccionado, el estado de el modal de favoritos o los comics
+
+  // Efecto para controlar el historial del navegador
+  useEffect(() => {
     
     const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
-      const comic = params.get('comic');
-      const isFavoritesOpen = params.get('open') === 'favorites';
-      
-      setSelectedComic(comic ? parseInt(comic) : null);
-      setFavoritesModalOpen(isFavoritesOpen);
-    };
-
+      const path = window.location.pathname.split('/');
+      if (path[1] === 'comic') {
+          setSelectedComic(parseInt(path[2]));
+      } else if (path[1] === 'favorites') {
+          setFavoritesModalOpen(true);
+          setSelectedComic(null);
+      }else{
+        setSelectedComic(null);
+        setFavoritesModalOpen(false);
+      }
+    }
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-
-  }, [comicsOffset]);
-
-  useEffect(() => {
-    if (selectedComic) {
-      const comic = comics.find(c => c.id === selectedComic);
-      document.title = comic ? `${comic.title}` : '| Marvel Comics';
-    } else if (favoritesModalOpen) {
-      document.title = 'Marvel Comics | Favorites';
-    } else {
-      document.title = 'Marvel Comics';
-    }
-  }, [selectedComic, favoritesModalOpen, comics]);
+  }, []);
 
   return (
     <>
-      <header>
-        <div className="header_content">
-          <div className="header_content_left">
-            <SelectMode setMode={setMode} mode={mode} />
-            <label className="switch">
-              <input 
-              checked={colorMode === 'dark'}
-              type="checkbox" 
-              onChange={()=>setColorMode(colorMode === 'dark' ? 'light' : 'dark')} />
-              <span className="slider round"></span>
-          </label>
-          </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search comics..."
-            className="search_input"
-          />
-
-          <MainButton onClick={() => setFavoritesModalOpen(true)} className="header_favorite">
-             Favorites ({favoriteComics !== null && favoriteComics && (favoriteComics.length)})
-          </MainButton>
-        </div>
-      </header>
-      
-      <Comics 
-        comics={comics} 
-        selectedComic={selectedComic} 
-        setSelectedComic={setSelectedComic} 
-        toggleFavoriteComic={toggleFavoriteComic}
-        loading={loading}
-        setOffset={setComicsOffset}
+      {/* Header */}
+      <Header
+        setMode={setMode}
+        mode={mode}
+        colorMode={colorMode}
+        handleColorMode={handleColorMode}
+        setFavoritesModalOpen={setFavoritesModalOpen}
+        favoriteComics={favoriteComics}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
       />
 
-      <FavoritesModal 
-        isOpen={favoritesModalOpen} 
+      {/* Grid de comics */}
+      <Comics
+        comics={comics}
+        selectedComic={selectedComic}
+        setSelectedComic={setSelectedComic}
+        toggleFavoriteComic={toggleFavoriteComic}
+        loading={loading}
+      />
+
+      {/* Modal de favoritos */}
+      <FavoritesModal
+        isOpen={favoritesModalOpen}
         onClose={() => setFavoritesModalOpen(false)}
         comics={favoriteComics}
         toggleFavoriteComic={toggleFavoriteComic}
@@ -189,9 +168,9 @@ function App() {
         loading={loading}
       />
 
-
-      <SelectedComic 
-        selectedComic={selectedComic} 
+      {/* Modal de comics */}
+      <SelectedComic
+        selectedComic={selectedComic}
         setSelectedComic={setSelectedComic}
         id="selected_comic"
         toggleFavoriteComic={toggleFavoriteComic}
@@ -199,8 +178,10 @@ function App() {
         openFavorites={() => setFavoritesModalOpen(true)}
       />
 
+      {/* Modal de favoritos y el de comics colocados asi para poder crear el efecto de superposicion al abrir un comic desde el modal de favoritos */}
+
     </>
-  )
+  );
 }
 
-export default App
+export default App; 

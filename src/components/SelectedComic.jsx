@@ -5,15 +5,20 @@ import MainButton from "./UI/MainButton";
 import Loader from "./UI/Loader";
 import SeriesModal from "./SeriesModal";
 
+
+// Componente para renderizar la imagen del comic
 const ComicImage = ({ thumbnail, title }) => (
+ thumbnail.path !== "http://i.annihil.us/u/prod/marvel/i/mg/b/40/image_not_available" && (   
     <div className='modal_image_container'>
         <img 
             src={`${thumbnail.path}.${thumbnail.extension}`} 
             alt={title} 
         />
     </div>
+    )
 );
 
+// Componente para renderizar el header del comic
 const ComicHeader = ({ title, issueNumber, isFavorited, toggleFavoriteComic, comic, price, link, pages }) => (
     <>
         <h1 className="modal_title">{title}</h1>
@@ -37,6 +42,7 @@ const ComicHeader = ({ title, issueNumber, isFavorited, toggleFavoriteComic, com
     </>
 );
 
+// Componente para renderizar los creadores del comic
 const ComicCreators = ({ creators }) => (
     creators.items.length > 0 && (
         <div className="modal_creators">
@@ -52,6 +58,7 @@ const ComicCreators = ({ creators }) => (
     )
 );
 
+// Componente para renderizar los personajes del comic
 const ComicCharacters = ({ characters }) => (
     characters.length > 0 && (
         <div className="modal_characters">
@@ -71,6 +78,7 @@ const ComicCharacters = ({ characters }) => (
     )
 );
 
+// Componente para renderizar el contenido del comic seleccionado
 const SelectedComicContent = ({comic, isFavorited, toggleFavoriteComic, openFavorites, handleSeriesClick}) => {
     return (
         <div className="modal_content_wrapper">
@@ -109,14 +117,15 @@ const SelectedComicContent = ({comic, isFavorited, toggleFavoriteComic, openFavo
     );
 };
 
+// Componente para renderizar el modal del comic seleccionado
 const SelectedComic = ({selectedComic, setSelectedComic, onClose, toggleFavoriteComic, openFavorites}) => {
     
     
     const [comic, setComic] = useState(null);
     const [seriesData, setSeriesData] = useState(null);
     const [isSeriesModalOpen, setIsSeriesModalOpen] = useState(false);
-    const isOpen = selectedComic !== null;
-    const [isVisible, setIsVisible] = useState(false);
+    const isOpen = selectedComic !== null; // Estado para saber si el modal esta abierto
+    const [isVisible, setIsVisible] = useState(false); // Estado para saber si el modal esta visible (diferente por tema de transiciones de css)
 
     // Si cambia el comic seleccionado, cargamos los datos del comic y sus personajes
     useEffect(() => {
@@ -150,6 +159,7 @@ const SelectedComic = ({selectedComic, setSelectedComic, onClose, toggleFavorite
             APIConnect.getWithURI(comic.series.resourceURI)
                 .then(data => {
                     setSeriesData(data.data.results[0]);
+                    console.log(data.data.results[0]);
                 });
         }
     };
@@ -178,4 +188,9 @@ const SelectedComic = ({selectedComic, setSelectedComic, onClose, toggleFavorite
     );
 };
 
+// Exportamos el componente modal unicamente
 export default SelectedComic;
+
+
+// Exportamos unicamente los componentes de imagenes y creadores para reutilizarlos en el modal de series
+export {ComicCreators, ComicImage}
